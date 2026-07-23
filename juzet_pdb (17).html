@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Juzet PDB 2026</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --bg:#EFF3EC;
+    --card:#FFFFFF;
+    --ink:#16302C;
+    --ink-soft:#4C6259;
+    --moss:#4C7A54;
+    --moss-dark:#375A3D;
+    --river:#1F6F8B;
+    --amber:#D98C29;
+    --rust:#B5482A;
+    --line:#D7E0D5;
+    --gold:#C9A227;
+    --silver:#8C9A96;
+    --bronze:#B0702F;
+    --radius:14px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;width:100%;overflow-x:hidden;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding-bottom:24px;
+  }
+  .tape{
+    height:14px;
+    background:repeating-linear-gradient(90deg, var(--river) 0 2px, transparent 2px 14px);
+    opacity:.35;
+  }
+  header{
+    background:linear-gradient(180deg,#163A40,#12313A);
+    color:#EAF2EF;
+    padding:20px 16px 22px;
+    position:relative;
+    overflow:hidden;
+    text-align:center;
+    transition:background .3s;
+  }
+  header.admin-mode{
+    background:linear-gradient(180deg,#3A5C2E,#294320);
+  }
+  .header-eyebrow-row{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#8FCBB8;
+    font-weight:700;
+    margin-bottom:12px;
+  }
+  .header-title-row{
+    display:grid;
+    grid-template-columns:1fr auto 1fr;
+    align-items:center;
+    gap:8px;
+    margin-bottom:12px;
+  }
+  .header-title-row h1{
+    margin:0;
+    font-family:Georgia,"Times New Roman",serif;
+    font-weight:700;
+    font-size:26px;
+    letter-spacing:.02em;
+    justify-self:center;
+    white-space:nowrap;
+  }
+  .header-title-row .icon-btn{justify-self:start;}
+  .header-title-row .participants-btn{justify-self:end;}
+  .header-status-row{
+    font-size:13px;
+    color:#B9D4CB;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+  }
+  .status-dot{
+    display:inline-block;width:7px;height:7px;border-radius:50%;
+    background:#7CD98E;
+    box-shadow:0 0 0 0 rgba(124,217,142,.6);
+    animation:pulse 1.8s infinite;
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(124,217,142,.5);}
+    70%{box-shadow:0 0 0 7px rgba(124,217,142,0);}
+    100%{box-shadow:0 0 0 0 rgba(124,217,142,0);}
+  }
+
+  .wrap{max-width:640px;margin:0 auto;padding:16px;}
+
+  .dashboard{display:flex;flex-direction:column;gap:14px;}
+  .col-left{order:2;}
+  .col-right{order:1;display:flex;flex-direction:column;gap:14px;}
+  .col-right .card, .col-right .bigfish{margin-bottom:0;}
+
+  .bigfish{
+    background:linear-gradient(135deg,#D98C29,#B5682A);
+    color:#FFF8ED;
+    border-radius:var(--radius);
+    padding:20px 18px;
+    margin:0;
+    box-shadow:0 6px 18px rgba(181,104,42,.25);
+    cursor:pointer;
+    text-align:center;
+  }
+  .bigfish .label{font-size:13px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;opacity:.95;}
+  .bigfish .value{font-size:19px;font-weight:800;margin-top:6px;}
+  .bigfish.empty{background:linear-gradient(135deg,#7C8F86,#5F726A);}
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:16px;
+    margin-bottom:14px;
+    border:1px solid var(--line);
+  }
+  .card.card-standings{
+    background:#EAF3EA;
+    border-color:#C9DDC7;
+  }
+  .card h2{
+    margin:0 0 12px;
+    font-size:14px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    font-weight:800;
+    color:var(--moss-dark);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card h2 .n{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    background:var(--moss);
+    color:#fff;
+    font-size:11px;
+    padding:2px 6px;
+    border-radius:5px;
+  }
+
+  /* Leaderboard */
+  .row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:11px 6px;
+    border-bottom:1px solid var(--line);
+    cursor:pointer;
+  }
+  .row:last-child{border-bottom:none;}
+  .rank{
+    width:28px;height:28px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:13px;
+    background:#E7ECE6;color:var(--ink-soft);
+    flex-shrink:0;
+  }
+  .rank.gold{background:var(--gold);color:#3a2e00;}
+  .rank.silver{background:var(--silver);color:#26312e;}
+  .rank.bronze{background:var(--bronze);color:#2f1c02;}
+  .row .name{flex:1;font-weight:700;font-size:15px;}
+  .row .total{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;font-size:16px;color:var(--river);}
+
+  .card.podium-card{
+    background:linear-gradient(160deg,#FFF9EE,#FDF2DC);
+    border:1.5px solid #E9D8A6;
+    box-shadow:0 6px 18px rgba(201,162,39,.18);
+  }
+  .podium-card h2{margin-bottom:16px;justify-content:center;color:#8A6A1E;}
+  .podium{display:flex;align-items:flex-end;gap:8px;justify-content:center;}
+  .podium-slot{
+    flex:1;min-width:0;background:#FFFFFF;border:1px solid #EEDFB8;
+    border-radius:10px 10px 4px 4px;padding:14px 6px 12px;text-align:center;cursor:pointer;
+    box-shadow:0 2px 6px rgba(0,0,0,.05);
+  }
+  .podium-slot.empty{visibility:hidden;}
+  .podium-slot.place-1{
+    order:2;padding-top:20px;background:#FFFFFF;
+    border-color:#C9A227;border-width:2.5px;
+    box-shadow:0 4px 14px rgba(201,162,39,.25);
+    min-height:132px;
+  }
+  .podium-slot.place-2{order:1;min-height:110px;}
+  .podium-slot.place-3{order:3;min-height:96px;}
+  .podium-rank{
+    width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:12px;margin:0 auto 8px;
+  }
+  .podium-rank.gold{background:var(--gold);color:#3a2e00;}
+  .podium-rank.silver{background:var(--silver);color:#26312e;}
+  .podium-rank.bronze{background:var(--bronze);color:#2f1c02;}
+  .podium-name{font-weight:700;font-size:13px;margin-bottom:3px;overflow-wrap:break-word;}
+  .podium-points{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;color:var(--river);font-size:12.5px;}
+
+  .detail{
+    padding:2px 0 2px;
+  }
+  .species-block{
+    background:#fff;
+    border:1px solid var(--line);
+    border-left-width:4px;
+    border-left-style:solid;
+    border-radius:8px;
+    padding:11px 13px;
+    margin-bottom:10px;
+  }
+  .species-block:last-child{margin-bottom:0;}
+  .species-block-header{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    margin-bottom:9px;
+    flex-wrap:wrap;
+  }
+  .species-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .species-block-title{font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.03em;color:var(--ink);}
+  .quota-flag{font-size:11.5px;font-weight:700;color:var(--rust);}
+  .species-block-points{
+    margin-left:auto;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-weight:800;color:var(--river);font-size:12.5px;
+  }
+  .catch-list{display:flex;flex-wrap:wrap;gap:6px;}
+  .catch-chip{
+    display:flex;align-items:center;gap:5px;background:#F3F6F2;
+    border-radius:20px;padding:5px 9px 5px 11px;font-size:12.5px;font-weight:700;color:var(--ink);
+  }
+  .species-avg{font-size:11.5px;color:var(--ink-soft);margin-top:9px;text-align:right;}
+  .badge{
+    font-size:10.5px;font-weight:700;padding:2px 6px;border-radius:5px;display:inline-block;
+  }
+  .badge.small{background:#F6DCD3;color:var(--rust);}
+  .badge.outq{background:#EFE6D0;color:#8A6A1E;}
+  .del{
+    background:none;border:none;color:var(--rust);font-size:16px;padding:2px 8px;cursor:pointer;
+  }
+  .empty-state{
+    color:var(--ink-soft);font-size:13.5px;text-align:center;padding:18px 8px;
+  }
+
+  /* Participants chips */
+
+  input[type=text], input[type=number]{
+    width:100%;
+    padding:12px 12px;
+    border-radius:10px;
+    border:1.5px solid var(--line);
+    font-size:16px;
+    font-family:inherit;
+    background:#FCFDFB;
+    color:var(--ink);
+  }
+  input:focus{outline:2px solid var(--river);outline-offset:1px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12.5px;color:var(--ink-soft);font-weight:700;margin-bottom:6px;}
+  .inline{display:flex;gap:10px;}
+  .inline > *{flex:1;}
+
+  button.primary{
+    width:100%;
+    background:var(--moss);
+    color:#fff;
+    border:none;
+    padding:14px;
+    border-radius:10px;
+    font-size:16px;
+    font-weight:800;
+    cursor:pointer;
+  }
+  button.primary:active{background:var(--moss-dark);}
+  button.ghost{
+    background:none;border:1.5px solid var(--line);color:var(--ink-soft);
+    padding:10px 14px;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;
+  }
+  button:disabled{opacity:.45;}
+
+  .speciesgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px;}
+  .sp-btn{
+    border:1.5px solid var(--line);border-left-width:4px;background:#fff;border-radius:10px;
+    padding:12px 10px;text-align:left;cursor:pointer;
+    display:flex;align-items:center;gap:8px;
+  }
+  .sp-btn .lbl{font-weight:700;font-size:14px;}
+  .sp-btn.selected{background:#EEF6EE;}
+
+  .toast{
+    position:fixed;left:50%;bottom:22px;transform:translateX(-50%);
+    background:var(--ink);color:#fff;padding:11px 18px;border-radius:30px;
+    font-size:13.5px;font-weight:600;box-shadow:0 8px 20px rgba(0,0,0,.25);
+    opacity:0;transition:opacity .25s, bottom .25s;pointer-events:none;
+    z-index:300;max-width:90%;text-align:center;
+  }
+  .toast.show{opacity:1;bottom:30px;}
+
+  details.rules summary{
+    cursor:pointer;font-weight:800;font-size:14px;color:var(--river);
+    list-style:none;
+  }
+  details.rules summary::-webkit-details-marker{display:none;}
+  details.rules summary:before{content:"▸ ";}
+  details.rules[open] summary:before{content:"▾ ";}
+  .rules table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;}
+  .rules th,.rules td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;}
+  .rules th{color:var(--ink-soft);font-size:11px;text-transform:uppercase;}
+  .rules p{font-size:13px;color:var(--ink-soft);margin:10px 0 0;}
+
+  .footerbar{text-align:center;padding:10px 0 4px;}
+  .footerbar button{font-size:12px;color:#B7C2BD;background:none;border:none;cursor:pointer;}
+  .lastsync{text-align:center;font-size:11px;color:var(--ink-soft);margin:-4px 0 14px;}
+
+  .loading{
+    display:flex;align-items:center;justify-content:center;height:60vh;color:var(--ink-soft);font-size:14px;
+  }
+
+  .participants-btn, .icon-btn{
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.25);
+    color:#EAF2EF; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; padding:0; flex-shrink:0;
+  }
+  .icon-btn.unlocked{background:rgba(124,217,142,.18); border-color:rgba(124,217,142,.4);}
+  .panel-list{max-height:44vh; overflow-y:auto; margin:2px 0 14px;}
+  .panel-row{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:9px 4px; border-bottom:1px solid var(--line); font-size:14.5px; font-weight:600;
+  }
+  .panel-row:last-child{border-bottom:none;}
+  .panel-row-actions{display:flex; align-items:center; gap:2px; flex-shrink:0;}
+  .edit-btn{
+    background:none;border:none;color:var(--river);font-size:15px;padding:2px 8px;cursor:pointer;
+  }
+  .panel-note{font-size:12.5px; color:var(--ink-soft); margin:4px 0 12px;}
+
+  .settings-btn{
+    width:32px; height:32px; border-radius:50%;
+    background:rgba(255,255,255,.12);
+    border:1px solid rgba(255,255,255,.25);
+    color:#EAF2EF; font-size:14px;
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer; padding:0; flex-shrink:0; margin-right:10px;
+  }
+  .settings-btn.hidden{display:none;}
+
+  .final-banner{
+    text-align:center; background:linear-gradient(160deg,#FFF9EE,#FDF2DC);
+    border:1.5px solid #E9D8A6; box-shadow:0 6px 18px rgba(201,162,39,.18);
+  }
+  .final-banner h2{justify-content:center;color:#8A6A1E;margin-bottom:6px;}
+  .final-sub{font-size:13.5px;color:var(--ink-soft);font-weight:600;}
+  .final-banner-actions{display:flex;flex-direction:column;gap:10px;margin-top:14px;align-items:center;}
+  .final-share-btn, .final-doc-btn{width:auto;padding:11px 22px;display:inline-block;}
+
+  .fab-fish{
+    background:#7CD98E; color:#0d2b1c; border:none; border-radius:20px;
+    padding:6px 13px; font-size:12.5px; font-weight:800; cursor:pointer;
+    margin-left:10px;
+    box-shadow:0 3px 10px rgba(0,0,0,.2);
+    display:inline-flex; align-items:center; gap:5px;
+  }
+  .fab-fish:active{background:#5EC479;}
+  .fab-fish.hidden{display:none;}
+  .fab-fish.icon-only{
+    width:32px; height:32px; padding:0; border-radius:50%;
+    font-size:15px; justify-content:center; margin-left:10px;
+  }
+  .player-card-fish{
+    width:100%; justify-content:center; margin:12px 0 0; flex-shrink:0;
+    padding:13px; font-size:15px; border-radius:10px;
+  }
+
+  .wizard-modal{
+    max-width:380px; position:relative; padding-top:38px;
+    border:2.5px solid var(--moss); text-align:center;
+    background:linear-gradient(180deg,#F3FAF3 0%,#FFFFFF 160px);
+  }
+  .wizard-close{
+    position:absolute; top:10px; right:10px; background:none; border:none;
+    font-size:19px; color:var(--ink-soft); cursor:pointer; padding:6px; line-height:1;
+  }
+  .wizard-progress{
+    font-size:13px; font-weight:800; letter-spacing:.02em; text-transform:uppercase;
+    color:var(--moss-dark); background:#EEF6EE; border-radius:6px;
+    padding:6px 10px; margin-bottom:12px; display:inline-block; max-width:100%;
+    overflow-wrap:break-word;
+  }
+  .wizard-title{font-size:19px; font-weight:800; margin-bottom:14px; color:var(--ink);}
+  .wizard-list{max-height:50vh; overflow-y:auto; margin:0 -6px;}
+  .wizard-row{
+    padding:15px 10px; border-bottom:1px solid var(--line); font-size:16.5px; font-weight:700;
+    cursor:pointer; border-radius:8px;
+  }
+  .wizard-row:last-child{border-bottom:none;}
+  .wizard-row:active{background:#EEF6EE;}
+  #wizardSizeInput{margin-top:4px;}
+
+  .result-modal{text-align:center;max-width:380px;border:3px solid var(--moss);}
+  .result-title{font-size:23px;font-weight:800;color:var(--ink);margin-bottom:10px;}
+  .result-msg{font-size:17px;color:var(--ink-soft);margin-bottom:20px;line-height:1.55;}
+
+  .player-card-modal{
+    max-width:420px;position:relative;padding-top:20px;max-height:85vh;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .player-card-scroll{overflow-y:auto;flex:1;min-height:0;}
+
+  .settings-modal{
+    max-width:460px;position:relative;max-height:88vh;
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .settings-scroll{overflow-y:auto;flex:1;min-height:0;}
+  .settings-section-title{
+    font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;
+    color:var(--moss-dark);margin:18px 0 10px;
+  }
+  .settings-section-title:first-child{margin-top:0;}
+  .settings-species-row{
+    background:#fff;border:1px solid var(--line);border-left-width:4px;border-left-style:solid;
+    border-radius:8px;padding:10px 12px;margin-bottom:8px;
+  }
+  .settings-species-name{display:flex;align-items:center;gap:7px;font-weight:800;font-size:13.5px;margin-bottom:8px;}
+  .settings-check{display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-bottom:8px;cursor:pointer;}
+  .settings-check input{width:auto;}
+  .settings-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+  .settings-fields label{display:block;}
+  .settings-label-text{
+    font-size:10.5px;color:var(--ink-soft);font-weight:700;display:block;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .settings-fields input{width:100%;display:block;padding:8px;font-size:14px;margin-top:2px;color:var(--ink);background:#FCFDFB;}
+  .settings-bonus-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}
+  .settings-actions{margin-top:20px;display:flex;flex-direction:column;gap:10px;}
+  textarea.settings-comment{
+    width:100%;min-height:80px;padding:12px;border-radius:10px;border:1.5px solid var(--line);
+    font-size:14px;font-family:inherit;background:#FCFDFB;color:var(--ink);resize:vertical;
+  }
+  .player-card-header{display:flex;align-items:center;gap:10px;margin-bottom:4px;}
+  .player-card-rank{
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;font-size:13px;
+    color:var(--ink-soft);background:#EEF3EC;padding:3px 8px;border-radius:6px;flex-shrink:0;
+  }
+  .player-card-name{font-size:19px;font-weight:800;color:var(--ink);flex:1;overflow-wrap:break-word;}
+  .player-card-total{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800;font-size:17px;color:var(--river);flex-shrink:0;}
+  .player-card-sub{font-size:12.5px;color:var(--ink-soft);margin-bottom:14px;}
+  .player-card-back, .wizard-back{
+    display:block; width:100%; text-align:center;
+    background:#EEF3EC; color:var(--ink); border:1.5px solid var(--line);
+    border-radius:10px; padding:13px; font-size:15px; font-weight:800;
+    margin-bottom:16px; cursor:pointer;
+  }
+  .player-card-back:active, .wizard-back:active{background:#E1E9E0;}
+
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(15,25,22,.55);
+    display:flex;align-items:center;justify-content:center;
+    padding:20px;z-index:100;
+  }
+  #modalOverlay{z-index:200;}
+  #resultOverlay{z-index:250;}
+  .modal-overlay.hidden{display:none;}
+  .modal{
+    background:#fff;border-radius:16px;padding:20px;max-width:340px;width:100%;
+    box-shadow:0 12px 34px rgba(0,0,0,.3);
+  }
+  .modal-msg{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:16px;line-height:1.4;}
+  .modal-actions{display:flex;gap:10px;}
+  .modal-actions button{flex:1;}
+  .modal input[type=text]{margin-bottom:16px;}
+  .modal input[type=text].pin-style{text-align:center;font-size:20px;letter-spacing:.2em;font-weight:700;}
+
+  /* ---------- Responsive ---------- */
+
+  /* Petits téléphones (iPhone SE et similaires) */
+  @media (max-width: 380px){
+    header{padding:16px 12px 18px;}
+    .header-title-row h1{font-size:21px;}
+    .header-eyebrow-row{font-size:10px;}
+    .header-status-row{font-size:12px;}
+    .participants-btn, .icon-btn, .settings-btn, .fab-fish.icon-only{width:28px;height:28px;font-size:13px;}
+    .wrap{padding:12px;}
+    .card{padding:13px;}
+    .speciesgrid{grid-template-columns:1fr;}
+    .inline{flex-direction:column;}
+    .inline > *{width:100%;}
+    .bigfish{margin-left:0;margin-right:0;}
+  }
+
+  /* Tablettes et grands écrans */
+  @media (min-width: 700px){
+    .wrap{max-width:920px;}
+    .bigfish{max-width:none;margin-left:0;margin-right:0;}
+    header{padding:26px 28px 30px;}
+    .header-title-row h1{font-size:32px;}
+    .header-status-row{font-size:14px;}
+    .speciesgrid{grid-template-columns:repeat(3,1fr);}
+    .card{padding:20px 22px;}
+    .row{padding:13px 8px;}
+    .row .name{font-size:16px;}
+    button.primary{font-size:16.5px;}
+
+    .dashboard{flex-direction:row;align-items:flex-start;}
+    .col-left{order:1;flex:1.3 1 0;min-width:0;}
+    .col-right{order:2;flex:1 1 0;min-width:0;}
+  }
+
+  @media (min-width: 1024px){
+    .wrap{max-width:1040px;}
+    .speciesgrid{grid-template-columns:repeat(4,1fr);}
+  }
+
+  /* Petits téléphones en mode paysage */
+  @media (max-height: 420px) and (orientation: landscape){
+    header{padding:12px 16px 14px;}
+    .header-title-row h1{font-size:18px;}
+    .header-eyebrow-row{display:none;}
+  }
+
+  /* ---------- Document imprimable / partageable (fin de concours) ---------- */
+  #printDocument{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #printDocument, #printDocument *{visibility:visible;}
+    #printDocument{display:block;position:absolute;left:0;top:0;width:100%;}
+    .del, .edit-btn{display:none !important;}
+  }
+  .print-page{
+    padding:16mm 14mm;page-break-after:always;color:#16302C;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  .print-page:last-child{page-break-after:auto;}
+  .print-cover{text-align:center;}
+  .print-cover h1{font-family:Georgia,serif;font-size:30px;margin:0 0 18px;}
+  .print-thanks{font-size:15px;line-height:1.6;max-width:480px;margin:0 auto 28px;color:#333;}
+  .print-cover h2{font-size:16px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;}
+  .print-podium{max-width:360px;margin:0 auto 24px;}
+  .print-podium-item{
+    display:flex;align-items:center;gap:12px;padding:10px 6px;
+    border-bottom:1px solid #ddd;font-size:16px;
+  }
+  .print-rank{
+    width:26px;height:26px;border-radius:50%;background:#EEE;color:#333;
+    display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;
+  }
+  .print-name{flex:1;text-align:left;font-weight:700;}
+  .print-pts{font-weight:800;}
+  .print-bigfish{
+    display:inline-block;margin-top:8px;padding:12px 20px;border:1.5px solid #D98C29;
+    border-radius:10px;font-size:14.5px;
+  }
+  .print-player h2{font-size:19px;margin:0 0 4px;}
+  .print-player-sub{font-size:13px;color:#555;margin-bottom:16px;}
+</style>
+</head>
+<body>
+
+<header id="mainHeader">
+  <div class="header-eyebrow-row">Concours de pêche du bord</div>
+  <div class="header-title-row">
+    <button class="icon-btn" id="lockBtn" onclick="toggleAdminMode()" title="Mode commissaire" aria-label="Mode commissaire">🔒</button>
+    <h1 id="eventTitle">JUZET PDB</h1>
+    <button class="participants-btn" onclick="openParticipantsPanel()">👥</button>
+  </div>
+  <div class="header-status-row">
+    <button class="settings-btn hidden" id="settingsBtn" onclick="openSettingsPanel()" title="Réglages" aria-label="Réglages">⚙️</button>
+    <span class="status-dot"></span>Classement en direct
+    <button class="fab-fish icon-only hidden" id="fabFish" onclick="openCatchWizard()" title="Ajouter une capture" aria-label="Ajouter une capture">🐟</button>
+  </div>
+</header>
+<div class="tape"></div>
+
+<div id="app" class="wrap">
+  <div class="loading">Chargement du concours…</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay hidden" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-msg" id="modalMsg"></div>
+    <input type="text" id="modalInput" style="display:none;" inputmode="numeric" maxlength="6" placeholder="Code" onkeydown="if(event.key==='Enter') modalConfirm()">
+    <div class="modal-actions">
+      <button class="ghost" onclick="modalCancel()">Annuler</button>
+      <button class="primary" onclick="modalConfirm()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="participantsOverlay">
+  <div class="modal">
+    <div class="modal-msg">Liste des participants</div>
+    <div id="participantsListInner"></div>
+    <div class="modal-actions">
+      <button class="primary" style="flex:1;" onclick="closeParticipantsPanel()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="catchWizardOverlay">
+  <div class="modal wizard-modal">
+    <button class="wizard-close" onclick="closeCatchWizard()">✕</button>
+    <div id="wizardContent"></div>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="resultOverlay">
+  <div class="modal result-modal">
+    <div class="result-title" id="resultTitle"></div>
+    <div class="result-msg" id="resultMsg"></div>
+    <button class="primary" onclick="closeResultModal()">OK</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="playerCardOverlay">
+  <div class="modal player-card-modal">
+    <button class="player-card-back" onclick="closePlayerCard()">← Retour au classement</button>
+    <div class="player-card-scroll" id="playerCardContent"></div>
+    <button class="fab-fish player-card-fish hidden" id="playerCardFishBtn" onclick="openCatchWizardForPlayer(playerCardId)">🐟 Poisson !</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="settingsOverlay">
+  <div class="modal settings-modal">
+    <button class="player-card-back" onclick="closeSettingsPanel()">← Fermer les réglages</button>
+    <div class="settings-scroll" id="settingsContent"></div>
+  </div>
+</div>
+
+<div id="printDocument"></div>
+
+<script>
+// =========================================================================
+// CONFIGURATION FIREBASE — À REMPLIR (voir GUIDE_FIREBASE.md)
+// Remplace les valeurs ci-dessous par celles de TON projet Firebase.
+// =========================================================================
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyC_0_u1R6kV1vsMOM4LsSj23MSmDBzfiJU",
+  authDomain: "juzet-pdb.firebaseapp.com",
+  databaseURL: "https://juzet-pdb-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "juzet-pdb",
+};
+const DB_PATH = "juzet_pdb_2026_data";
+// =========================================================================
+
+const SPECIES = {
+  perche:    { label:"Perche",     code:"PER", quota:6,    min:150, coeff:1, gender:"f" },
+  blackbass: { label:"Black bass", code:"BB",  quota:5,    min:200, coeff:1 },
+  brochet:   { label:"Brochet",    code:"BRO", quota:null, min:500, coeff:1 },
+  sandre:    { label:"Sandre",     code:"SAN", quota:null, min:400, coeff:1 },
+  chevesne:  { label:"Chevesne",   code:"CHE", quota:null, min:200, coeff:1 },
+  aspe:      { label:"Aspe",       code:"ASP", quota:null, min:200, coeff:1 },
+  mulet:     { label:"Mulet",      code:"MUL", quota:4,    min:400, coeff:1 },
+  silure:    { label:"Silure",     code:"SIL", quota:2,    min:800, coeff:0.5 },
+};
+const SPECIES_ORDER = ["perche","blackbass","brochet","sandre","chevesne","aspe","mulet","silure"];
+
+function defaultSettings(){
+  return {
+    eventName: "JUZET PDB",
+    competitionEnded: false,
+    rulesComment: "Pêche du bord uniquement, leurres artificiels, rayon 50km en rivière.",
+    bonus2: 200,
+    bonus3: 400,
+    species: {
+      perche:    { enabled:true, min:150, quota:6, coeff:1 },
+      blackbass: { enabled:true, min:200, quota:5, coeff:1 },
+      brochet:   { enabled:true, min:500, quota:0, coeff:1 },
+      sandre:    { enabled:true, min:400, quota:0, coeff:1 },
+      chevesne:  { enabled:true, min:200, quota:0, coeff:1 },
+      aspe:      { enabled:true, min:200, quota:0, coeff:1 },
+      mulet:     { enabled:true, min:400, quota:4, coeff:1 },
+      silure:    { enabled:true, min:800, quota:2, coeff:0.5 },
+    }
+  };
+}
+
+function mergeState(val){
+  const d = defaultSettings();
+  const incoming = (val && val.settings) || {};
+  const mergedSpecies = {};
+  SPECIES_ORDER.forEach(k=>{
+    mergedSpecies[k] = { ...d.species[k], ...((incoming.species && incoming.species[k]) || {}) };
+  });
+  return {
+    participants: (val && val.participants) || [],
+    catches: (val && val.catches) || [],
+    settings: {
+      eventName: incoming.eventName || d.eventName,
+      competitionEnded: !!incoming.competitionEnded,
+      rulesComment: (incoming.rulesComment !== undefined) ? incoming.rulesComment : d.rulesComment,
+      bonus2: (incoming.bonus2 !== undefined) ? incoming.bonus2 : d.bonus2,
+      bonus3: (incoming.bonus3 !== undefined) ? incoming.bonus3 : d.bonus3,
+      species: mergedSpecies,
+    }
+  };
+}
+
+// Fusionne les métadonnées fixes (nom, code, genre) avec les réglages modifiables (min/quota/coeff/autorisé)
+function cfgFor(key){
+  const base = SPECIES[key];
+  const override = (state.settings && state.settings.species && state.settings.species[key]) || {};
+  const merged = { ...base, ...override };
+  if(merged.enabled === undefined) merged.enabled = true; // par défaut : autorisée si l'info manque
+  return merged;
+}
+
+let state = { participants: [], catches: [], settings: defaultSettings() };
+let selectedParticipantId = null;
+let selectedSpecies = null;
+let lastSyncedAt = null;
+let isAdmin = false;
+const ADMIN_PIN = "2026";
+
+let dbRef = null;
+let firebaseReady = false;
+let suppressNextEcho = false;
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function isConfigFilled(){
+  return !Object.values(FIREBASE_CONFIG).some(v => String(v).includes("COLLE_TON") || String(v).includes("COLLE_TA"));
+}
+
+function initFirebase(){
+  if(!isConfigFilled()){
+    showConfigError();
+    return;
+  }
+  try{
+    firebase.initializeApp(FIREBASE_CONFIG);
+    dbRef = firebase.database().ref(DB_PATH);
+    firebaseReady = true;
+
+    dbRef.on('value', (snapshot) => {
+      const val = snapshot.val();
+      if(suppressNextEcho){ suppressNextEcho = false; return; }
+      state = mergeState(val);
+      lastSyncedAt = new Date();
+      render();
+    }, (err) => {
+      showToast("⚠️ Connexion à la base impossible — vérifie ta configuration Firebase");
+    });
+  }catch(e){
+    showConfigError();
+  }
+}
+
+function showConfigError(){
+  const app = document.getElementById('app');
+  app.innerHTML = `<div class="card" style="border-color:var(--rust);">
+    <h2 style="color:var(--rust);">Configuration Firebase manquante</h2>
+    <div class="empty-state" style="text-align:left;">
+      Ouvre le fichier <code>juzet_pdb.html</code>, trouve le bloc <code>FIREBASE_CONFIG</code> tout en haut du script,
+      et remplace les valeurs par celles de ton projet Firebase.<br><br>
+      Suis le guide GUIDE_FIREBASE.md fourni avec l'appli, puis republie le fichier sur GitHub Pages.
+    </div>
+  </div>`;
+}
+
+async function saveData(){
+  if(!firebaseReady) return;
+  try{
+    suppressNextEcho = true;
+    await dbRef.set(state);
+    lastSyncedAt = new Date();
+  }catch(e){
+    suppressNextEcho = false;
+    showToast("⚠️ Échec de sauvegarde, réessaie");
+  }
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=> t.classList.remove('show'), 2400);
+}
+
+// ---------- Scoring ----------
+function computeResults(){
+  const results = state.participants.map(p=>{
+    const pCatches = state.catches.filter(c=>c.participantId===p.id);
+    let total = 0;
+    let breakdown = {};
+    let distinctCountedSpecies = 0;
+    let allValidSizes = [];
+
+    SPECIES_ORDER.forEach(key=>{
+      // cfg = réglages ACTUELS de l'espèce. Utilisés pour le quota (plafond global, toujours à jour)
+      // et comme valeur de repli pour d'anciennes captures qui n'auraient pas encore de règle figée.
+      const cfg = cfgFor(key);
+      let list = pCatches.filter(c=>c.species===key).map(c=>({...c}));
+      list.sort((a,b)=> b.sizeMm - a.sizeMm);
+      list.forEach(c=>{
+        // Chaque capture est jugée avec la taille minimale en vigueur AU MOMENT où elle a été enregistrée
+        // (verrouillée dans c.ruleMin) : un changement de règle en cours de concours ne modifie jamais
+        // rétroactivement une capture déjà validée ou déjà rejetée.
+        const effMin = (c.ruleMin !== undefined) ? c.ruleMin : cfg.min;
+        c.valid = c.sizeMm >= effMin;
+      });
+      let eligible = list.filter(c=>c.valid);
+      let counted = cfg.quota ? eligible.slice(0, cfg.quota) : eligible;
+      const countedIds = new Set(counted.map(c=>c.id));
+      list.forEach(c=> c.counted = countedIds.has(c.id));
+      const speciesPoints = counted.reduce((s,c)=>{
+        // Idem pour le coefficient : verrouillé au moment de la capture (c.ruleCoeff)
+        const effCoeff = (c.ruleCoeff !== undefined) ? c.ruleCoeff : cfg.coeff;
+        return s + Math.round(c.sizeMm*effCoeff);
+      }, 0);
+      total += speciesPoints;
+      if(counted.length>0) distinctCountedSpecies++;
+      counted.forEach(c=> allValidSizes.push(c.sizeMm));
+      breakdown[key] = { list, points: speciesPoints };
+    });
+
+    const bonus = distinctCountedSpecies>=3 ? state.settings.bonus3 : (distinctCountedSpecies===2 ? state.settings.bonus2 : 0);
+    total += bonus;
+    const avg = allValidSizes.length ? Math.round(allValidSizes.reduce((a,b)=>a+b,0)/allValidSizes.length) : 0;
+
+    return { ...p, total, bonus, distinctCountedSpecies, breakdown, avg, catchCount: pCatches.length };
+  });
+  results.sort((a,b)=> b.total - a.total);
+  return results;
+}
+
+function getBigFish(){
+  const valid = state.catches.filter(c=>{
+    const cfg = cfgFor(c.species);
+    const effMin = (c.ruleMin !== undefined) ? c.ruleMin : cfg.min;
+    return c.sizeMm >= effMin;
+  });
+  if(!valid.length) return null;
+  const best = valid.reduce((a,b)=> b.sizeMm > a.sizeMm ? b : a);
+  const participant = state.participants.find(p=>p.id===best.participantId);
+  return { ...best, participantName: participant ? participant.name : "?" };
+}
+
+async function shareResults(){
+  const results = computeResults();
+  const top3 = results.slice(0,3);
+  const bigFish = getBigFish();
+
+  let text = `🏆 ${state.settings.eventName} — Résultats finaux\n\n`;
+  top3.forEach((r,i)=>{ text += `${i+1}. ${r.name} — ${r.total} pts\n`; });
+  if(bigFish){
+    const sp = SPECIES[bigFish.species];
+    text += `\n🐟 Big Fish : ${bigFish.participantName} — ${sp.label} ${bigFish.sizeMm}mm`;
+  }
+
+  const shareData = { title: state.settings.eventName, text, url: location.href };
+
+  if(navigator.share){
+    try{
+      await navigator.share(shareData);
+    }catch(e){
+      // l'utilisateur a annulé le partage, rien à faire
+    }
+  } else if(navigator.clipboard){
+    try{
+      await navigator.clipboard.writeText(text + '\n' + location.href);
+      showToast("📋 Résultats copiés dans le presse-papiers");
+    }catch(e){
+      showToast("⚠️ Partage non disponible sur cet appareil");
+    }
+  } else {
+    showToast("⚠️ Partage non disponible sur cet appareil");
+  }
+}
+
+function buildPrintDocument(){
+  const results = computeResults();
+  const bigFish = getBigFish();
+  const top3 = results.slice(0,3);
+
+  let html = `<div class="print-page print-cover">
+    <h1>${escapeHtml(state.settings.eventName)}</h1>
+    <p class="print-thanks">Un grand merci à toutes les pêcheuses et tous les pêcheurs pour leur participation, et à celles et ceux qui ont organisé ce concours pour ce beau week-end de pêche !</p>
+    <h2>🏆 Podium</h2>
+    <div class="print-podium">` +
+    top3.map((r,i)=> `<div class="print-podium-item"><span class="print-rank">${i+1}</span><span class="print-name">${escapeHtml(r.name)}</span><span class="print-pts">${r.total} pts</span></div>`).join('') +
+    `</div>`;
+
+  if(bigFish){
+    const sp = SPECIES[bigFish.species];
+    html += `<div class="print-bigfish"><strong>🐟 Big Fish</strong> — ${escapeHtml(bigFish.participantName)} · ${sp.label} ${bigFish.sizeMm}mm</div>`;
+  }
+  html += `</div>`;
+
+  results.forEach((r, idx)=>{
+    html += `<div class="print-page print-player">
+      <h2>#${idx+1} — ${escapeHtml(r.name)} — ${r.total} pts</h2>
+      <div class="print-player-sub">${r.catchCount} capture${r.catchCount>1?'s':''} · ${r.distinctCountedSpecies} espèce${r.distinctCountedSpecies>1?'s':''}${r.bonus?(' · bonus +'+r.bonus):''}</div>
+      ${renderDetail(r)}
+    </div>`;
+  });
+
+  document.getElementById('printDocument').innerHTML = html;
+}
+
+function generateResultsDocument(){
+  if(!state.participants.length){
+    showToast("⚠️ Aucun participant à inclure dans le document");
+    return;
+  }
+  buildPrintDocument();
+  setTimeout(()=> window.print(), 100);
+}
+
+// ---------- Rendering ----------
+function render(){
+  const app = document.getElementById('app');
+  const results = computeResults();
+  const bigFish = getBigFish();
+
+  const lockBtn = document.getElementById('lockBtn');
+  if(lockBtn){
+    lockBtn.textContent = isAdmin ? "🔓" : "🔒";
+    lockBtn.title = isAdmin ? "Sortir du mode commissaire" : "Passer en mode commissaire";
+    lockBtn.setAttribute('aria-label', lockBtn.title);
+    lockBtn.classList.toggle('unlocked', isAdmin);
+  }
+
+  const fab = document.getElementById('fabFish');
+  if(fab) fab.classList.toggle('hidden', !isAdmin || state.settings.competitionEnded);
+
+  const settingsBtn = document.getElementById('settingsBtn');
+  if(settingsBtn) settingsBtn.classList.toggle('hidden', !isAdmin);
+
+  const eventTitle = document.getElementById('eventTitle');
+  if(eventTitle) eventTitle.textContent = state.settings.eventName;
+
+  const headerEl = document.getElementById('mainHeader');
+  if(headerEl) headerEl.classList.toggle('admin-mode', isAdmin);
+
+  const playerCardFishBtn = document.getElementById('playerCardFishBtn');
+  if(playerCardFishBtn) playerCardFishBtn.classList.toggle('hidden', !isAdmin || state.settings.competitionEnded);
+
+  let html = "";
+
+  if(state.settings.competitionEnded){
+    html += `<div class="card final-banner">
+      <h2>🏁 Concours terminé</h2>
+      <div class="final-sub">Résultats finaux — ${escapeHtml(state.settings.eventName)}</div>
+      <div class="final-banner-actions">
+        <button class="primary final-share-btn" onclick="shareResults()">📤 Partager les résultats</button>
+        <button class="ghost final-doc-btn" onclick="generateResultsDocument()">📄 Document complet (toutes les fiches)</button>
+      </div>
+    </div>`;
+  }
+
+  html += `<div class="dashboard">
+    <div class="col-left">${renderClassementList(results)}</div>
+    <div class="col-right">${renderPodium(results)}${renderBigFishCard(bigFish)}</div>
+  </div>`;
+
+  // Rules
+  const enabledKeys = SPECIES_ORDER.filter(k=>cfgFor(k).enabled);
+  html += `<div class="card"><details class="rules"><summary>Règlement</summary>
+    <table><thead><tr><th>Espèce</th><th>Mini</th><th>Quota</th><th>Coeff.</th></tr></thead><tbody>
+    ${enabledKeys.map(k=>{const c=cfgFor(k); return `<tr><td>${SPECIES[k].label}</td><td>${c.min}mm</td><td>${c.quota||'—'}</td><td>${c.coeff}</td></tr>`}).join('')}
+    </tbody></table>
+    <p>Points = taille en mm × coefficient de l'espèce. Bonus +${state.settings.bonus2} pts pour 2 espèces différentes maillées, +${state.settings.bonus3} pts pour 3 espèces ou plus.</p>
+    ${state.settings.rulesComment ? `<p class="rules-comment">${escapeHtml(state.settings.rulesComment).replace(/\n/g,'<br>')}</p>` : ''}
+  </details></div>`;
+
+  html += `<div class="lastsync">${lastSyncedAt ? 'Synchronisé à '+lastSyncedAt.toLocaleTimeString('fr-FR') : ''}</div>`;
+  if(isAdmin){
+    html += `<div class="footerbar"><button onclick="confirmReset()">Réinitialiser le concours</button></div>`;
+  }
+
+  app.innerHTML = html;
+
+  renderParticipantsPanel();
+  if(playerCardId) renderPlayerCard();
+}
+
+function renderClassementList(results){
+  let html = `<div class="card card-standings"><h2>Classement <span class="n">${results.length}</span></h2>`;
+  if(!results.length){
+    html += `<div class="empty-state">Ajoute des participants via le bouton 👥 en haut à droite pour démarrer le concours.</div>`;
+  } else {
+    results.forEach((r, i)=>{
+      const rankClass = i===0?'gold':i===1?'silver':i===2?'bronze':'';
+      html += `<div class="row" onclick="openPlayerCard('${r.id}')">
+        <div class="rank ${rankClass}">${i+1}</div>
+        <div class="name">${escapeHtml(r.name)}</div>
+        <div class="total">${r.total}</div>
+      </div>`;
+    });
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderPodium(results){
+  const top3 = results.slice(0,3);
+  let html = `<div class="card podium-card"><h2>🏆 Podium</h2>`;
+  if(!top3.length){
+    html += `<div class="empty-state">Pas encore de classement.</div>`;
+  } else {
+    html += `<div class="podium">`;
+    for(let place=1; place<=3; place++){
+      const r = top3[place-1];
+      const cls = place===1?'gold':place===2?'silver':'bronze';
+      if(!r){
+        html += `<div class="podium-slot place-${place} empty"></div>`;
+      } else {
+        html += `<div class="podium-slot place-${place}" onclick="openPlayerCard('${r.id}')">
+          <div class="podium-rank ${cls}">${place}</div>
+          <div class="podium-name">${escapeHtml(r.name)}</div>
+          <div class="podium-points">${r.total} pts</div>
+        </div>`;
+      }
+    }
+    html += `</div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+function renderBigFishCard(bigFish){
+  if(bigFish){
+    const sp = SPECIES[bigFish.species];
+    return `<div class="bigfish" onclick="openPlayerCard('${bigFish.participantId}')">
+      <div class="label">BIG FISH</div>
+      <div class="value">${escapeHtml(bigFish.participantName)} - ${sp.label} ${bigFish.sizeMm}mm</div>
+    </div>`;
+  }
+  return `<div class="bigfish empty">
+    <div class="label">BIG FISH</div>
+    <div class="value">Aucune capture valide pour l'instant</div>
+  </div>`;
+}
+
+function renderParticipantsPanel(){
+  const el = document.getElementById('participantsListInner');
+  if(!el) return;
+  let html = '';
+  if(isAdmin){
+    html += `<div class="field">
+      <div class="inline">
+        <input type="text" id="newNameInputPanel" placeholder="Nom du pêcheur" maxlength="30" onkeydown="if(event.key==='Enter') addParticipant()">
+        <div style="flex:0 0 auto;width:auto;">
+          <button class="primary" style="padding:12px 18px;" onclick="addParticipant()">Ajouter</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  if(state.participants.length){
+    html += `<div class="panel-list">` + state.participants.map(p=>
+      `<div class="panel-row"><span>${escapeHtml(p.name)}</span><span class="panel-row-actions">${isAdmin ? `<button class="edit-btn" onclick="renameParticipant('${p.id}', event)">✎</button><button class="del" onclick="removeParticipant('${p.id}', event)">✕</button>` : ''}</span></div>`
+    ).join('') + `</div>`;
+  } else {
+    html += `<div class="empty-state">Personne pour l'instant.</div>`;
+  }
+  if(!isAdmin){
+    html += `<div class="panel-note">Passe en mode commissaire (🔒 en haut) pour ajouter ou retirer des participants.</div>`;
+  }
+  el.innerHTML = html;
+}
+
+function openParticipantsPanel(){
+  document.getElementById('participantsOverlay').classList.remove('hidden');
+  renderParticipantsPanel();
+}
+function closeParticipantsPanel(){
+  document.getElementById('participantsOverlay').classList.add('hidden');
+}
+
+// ---------- Réglages (mode commissaire) ----------
+function openSettingsPanel(){
+  if(!isAdmin) return;
+  document.getElementById('settingsOverlay').classList.remove('hidden');
+  renderSettingsPanel();
+}
+function closeSettingsPanel(){
+  document.getElementById('settingsOverlay').classList.add('hidden');
+}
+
+function renderSettingsPanel(){
+  const el = document.getElementById('settingsContent');
+  if(!el) return;
+  const s = state.settings;
+  let html = `<div class="settings-section-title">Événement</div>
+    <div class="field"><label>Nom de l'événement (titre affiché)</label>
+      <input type="text" id="set-eventName" value="${escapeHtml(s.eventName)}" maxlength="40"></div>
+
+    <div class="settings-section-title">Espèces autorisées</div>` +
+    SPECIES_ORDER.map(key=>{
+      const cfg = cfgFor(key);
+      const color = SPECIES_COLORS[key];
+      return `<div class="settings-species-row" style="border-left-color:${color};">
+        <div class="settings-species-name"><span class="species-dot" style="background:${color};"></span>${SPECIES[key].label}</div>
+        <label class="settings-check"><input type="checkbox" id="set-${key}-enabled" ${cfg.enabled?'checked':''}> Autorisée dans ce concours</label>
+        <div class="settings-fields">
+          <label><span class="settings-label-text">Mini (mm)</span><input type="number" id="set-${key}-min" value="${cfg.min}" min="0"></label>
+          <label><span class="settings-label-text">Quota</span><input type="number" id="set-${key}-quota" value="${cfg.quota||0}" min="0" placeholder="0=illimité" title="0 = illimité"></label>
+          <label><span class="settings-label-text">Coeff.</span><input type="number" id="set-${key}-coeff" value="${cfg.coeff}" min="0" step="0.1"></label>
+        </div>
+      </div>`;
+    }).join('') +
+
+    `<div class="settings-section-title">Bonus (espèces différentes maillées)</div>
+    <div class="settings-bonus-row">
+      <label>Bonus pour 2 espèces<input type="number" id="set-bonus2" value="${s.bonus2}" min="0"></label>
+      <label>Bonus pour 3 espèces ou plus<input type="number" id="set-bonus3" value="${s.bonus3}" min="0"></label>
+    </div>
+
+    <div class="settings-section-title">Commentaire (règlement)</div>
+    <textarea class="settings-comment" id="set-comment" maxlength="600" placeholder="Précisions à afficher dans le règlement (ex : horaires, remise des prix...)">${escapeHtml(s.rulesComment)}</textarea>
+
+    <div class="settings-actions">
+      <button class="primary" onclick="saveSettings()">Enregistrer les réglages</button>
+      <button class="ghost" style="width:100%;" onclick="toggleCompetitionEnded()">${s.competitionEnded ? '🔓 Rouvrir le concours' : '🏁 Terminer le concours'}</button>
+    </div>`;
+  el.innerHTML = html;
+}
+
+async function saveSettings(){
+  if(!isAdmin) return;
+  const newSpecies = {};
+  SPECIES_ORDER.forEach(key=>{
+    const enabledEl = document.getElementById(`set-${key}-enabled`);
+    const minEl = document.getElementById(`set-${key}-min`);
+    const quotaEl = document.getElementById(`set-${key}-quota`);
+    const coeffEl = document.getElementById(`set-${key}-coeff`);
+    const prev = cfgFor(key);
+    const min = parseInt(minEl.value, 10);
+    const quota = parseInt(quotaEl.value, 10);
+    const coeff = parseFloat(coeffEl.value);
+    newSpecies[key] = {
+      enabled: !!enabledEl.checked,
+      min: (Number.isFinite(min) && min>=0) ? min : prev.min,
+      quota: (Number.isFinite(quota) && quota>=0) ? quota : (prev.quota||0),
+      coeff: (Number.isFinite(coeff) && coeff>0) ? coeff : prev.coeff,
+    };
+  });
+
+  const nameEl = document.getElementById('set-eventName');
+  const newName = nameEl.value.trim();
+  const bonus2El = document.getElementById('set-bonus2');
+  const bonus3El = document.getElementById('set-bonus3');
+  const b2 = parseInt(bonus2El.value, 10);
+  const b3 = parseInt(bonus3El.value, 10);
+  const commentEl = document.getElementById('set-comment');
+
+  state.settings = {
+    eventName: newName || state.settings.eventName,
+    competitionEnded: state.settings.competitionEnded,
+    rulesComment: commentEl.value.trim(),
+    bonus2: Number.isFinite(b2) && b2>=0 ? b2 : state.settings.bonus2,
+    bonus3: Number.isFinite(b3) && b3>=0 ? b3 : state.settings.bonus3,
+    species: newSpecies,
+  };
+  await saveData();
+  closeSettingsPanel();
+  render();
+  showToast("✅ Réglages enregistrés");
+}
+
+async function toggleCompetitionEnded(){
+  if(!isAdmin) return;
+  const willEnd = !state.settings.competitionEnded;
+  if(willEnd){
+    const ok = await askConfirm("Marquer le concours comme terminé ? Les résultats finaux seront mis en avant sur l'accueil. Tu pourras rouvrir si besoin.");
+    if(!ok) return;
+  }
+  state.settings.competitionEnded = willEnd;
+  await saveData();
+  closeSettingsPanel();
+  render();
+  showToast(willEnd ? "🏁 Concours marqué comme terminé" : "🔓 Concours rouvert");
+}
+
+const SPECIES_COLORS = {
+  perche:    "#4C7A54",
+  blackbass: "#1F6F8B",
+  brochet:   "#7B4B94",
+  sandre:    "#C98A2B",
+  chevesne:  "#B5482A",
+  aspe:      "#2F9C95",
+  mulet:     "#8C6D46",
+  silure:    "#46546B",
+};
+
+function renderDetail(r){
+  let html = `<div class="detail">`;
+  let any = false;
+  SPECIES_ORDER.forEach(key=>{
+    const b = r.breakdown[key];
+    if(b.list.length){
+      any = true;
+      const s = SPECIES[key];
+      const cfg = cfgFor(key);
+      const color = SPECIES_COLORS[key];
+      const validSizes = b.list.filter(c=>c.valid).map(c=>c.sizeMm);
+      const avg = validSizes.length ? Math.round(validSizes.reduce((a,x)=>a+x,0)/validSizes.length) : null;
+      const quotaReached = cfg.quota && b.list.filter(c=>c.counted).length >= cfg.quota;
+      html += `<div class="species-block" style="border-left-color:${color};">
+        <div class="species-block-header">
+          <span class="species-dot" style="background:${color};"></span>
+          <span class="species-block-title">${s.label}</span>
+          ${quotaReached ? '<span class="quota-flag">(quota atteint !)</span>' : ''}
+          <span class="species-block-points">${b.points} pts</span>
+        </div>
+        <div class="catch-list">` +
+        b.list.map(c=>{
+          const badge = c.counted ? ''
+            : (!c.valid ? '<span class="badge small">trop petit</span>' : '<span class="badge outq">hors quota</span>');
+          const delBtn = isAdmin ? `<button class="del" onclick="deleteCatch('${c.id}', event)">✕</button>` : '';
+          return `<div class="catch-chip"><span class="catch-size">${c.sizeMm} mm</span>${badge}${delBtn}</div>`;
+        }).join('') +
+        `</div>`;
+      if(avg !== null){
+        html += `<div class="species-avg">Moyenne ${s.label.toLowerCase()} : ${avg} mm</div>`;
+      }
+      html += `</div>`;
+    }
+  });
+  if(!any) html += `<div class="empty-state">Aucune capture enregistrée pour ce pêcheur.</div>`;
+  html += `</div>`;
+  return html;
+}
+
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+
+// ---------- Modal helpers (replaces blocked browser confirm/prompt) ----------
+let modalResolve = null;
+function askConfirm(msg){
+  return new Promise(resolve=>{
+    modalResolve = resolve;
+    document.getElementById('modalMsg').textContent = msg;
+    const inp = document.getElementById('modalInput');
+    inp.style.display = 'none';
+    inp.classList.remove('pin-style');
+    document.getElementById('modalOverlay').classList.remove('hidden');
+  });
+}
+function askPin(msg){
+  return new Promise(resolve=>{
+    modalResolve = resolve;
+    document.getElementById('modalMsg').textContent = msg;
+    const inp = document.getElementById('modalInput');
+    inp.style.display = 'block';
+    inp.classList.add('pin-style');
+    inp.value = '';
+    inp.type = 'text';
+    inp.maxLength = 6;
+    inp.setAttribute('inputmode','numeric');
+    document.getElementById('modalOverlay').classList.remove('hidden');
+    setTimeout(()=> inp.focus(), 50);
+  });
+}
+function askText(msg, defaultValue){
+  return new Promise(resolve=>{
+    modalResolve = resolve;
+    document.getElementById('modalMsg').textContent = msg;
+    const inp = document.getElementById('modalInput');
+    inp.style.display = 'block';
+    inp.classList.remove('pin-style');
+    inp.type = 'text';
+    inp.maxLength = 30;
+    inp.removeAttribute('inputmode');
+    inp.value = defaultValue || '';
+    document.getElementById('modalOverlay').classList.remove('hidden');
+    setTimeout(()=>{ inp.focus(); inp.select(); }, 50);
+  });
+}
+function modalConfirm(){
+  const inp = document.getElementById('modalInput');
+  const value = inp.style.display !== 'none' ? inp.value : true;
+  document.getElementById('modalOverlay').classList.add('hidden');
+  if(modalResolve) modalResolve(value);
+  modalResolve = null;
+}
+function modalCancel(){
+  document.getElementById('modalOverlay').classList.add('hidden');
+  if(modalResolve) modalResolve(false);
+  modalResolve = null;
+}
+
+// ---------- Admin mode ----------
+async function toggleAdminMode(){
+  if(isAdmin){
+    isAdmin = false;
+    closeCatchWizard();
+    render();
+    showToast("🔒 Sortie du mode commissaire");
+    return;
+  }
+  const code = await askPin("Entre le code pour passer en mode commissaire :");
+  if(code === ADMIN_PIN){
+    isAdmin = true;
+    render();
+    showToast("🔓 Mode commissaire activé");
+  } else if(code !== false){
+    showToast("⚠️ Code incorrect");
+  }
+}
+
+// ---------- Actions ----------
+let playerCardId = null;
+
+function openPlayerCard(id){
+  playerCardId = id;
+  document.getElementById('playerCardOverlay').classList.remove('hidden');
+  renderPlayerCard();
+}
+function closePlayerCard(){
+  document.getElementById('playerCardOverlay').classList.add('hidden');
+  playerCardId = null;
+}
+function renderPlayerCard(){
+  const el = document.getElementById('playerCardContent');
+  if(!el || !playerCardId) return;
+  const results = computeResults();
+  const r = results.find(x=>x.id===playerCardId);
+  if(!r){
+    el.innerHTML = `<div class="empty-state">Ce pêcheur n'existe plus.</div>`;
+    return;
+  }
+  const rank = results.findIndex(x=>x.id===playerCardId) + 1;
+  let html = `<div class="player-card-header">
+      <div class="player-card-rank">#${rank}</div>
+      <div class="player-card-name">${escapeHtml(r.name)}</div>
+      <div class="player-card-total">${r.total} pts</div>
+    </div>
+    <div class="player-card-sub">${r.catchCount} capture${r.catchCount>1?'s':''} · ${r.distinctCountedSpecies} espèce${r.distinctCountedSpecies>1?'s':''}${r.bonus?(' · bonus +'+r.bonus):''}</div>`;
+  html += renderDetail(r);
+  el.innerHTML = html;
+}
+
+async function addParticipant(){
+  if(!isAdmin) return;
+  const input = document.getElementById('newNameInputPanel');
+  const name = input.value.trim();
+  if(!name) return;
+  if(state.participants.some(p=>p.name.toLowerCase()===name.toLowerCase())){
+    showToast("⚠️ Ce nom existe déjà");
+    return;
+  }
+  state.participants.push({ id: uid(), name });
+  await saveData();
+  render();
+  showToast(`✅ ${name} ajouté au concours`);
+}
+
+async function removeParticipant(id, evt){
+  evt.stopPropagation();
+  if(!isAdmin) return;
+  const p = state.participants.find(x=>x.id===id);
+  if(!p) return;
+  const ok = await askConfirm(`Retirer ${p.name} et toutes ses captures ? Cette action est définitive.`);
+  if(!ok) return;
+  state.participants = state.participants.filter(x=>x.id!==id);
+  state.catches = state.catches.filter(c=>c.participantId!==id);
+  if(selectedParticipantId===id) selectedParticipantId = null;
+  await saveData();
+  render();
+  showToast(`🗑️ ${p.name} retiré du concours`);
+}
+
+async function renameParticipant(id, evt){
+  evt.stopPropagation();
+  if(!isAdmin) return;
+  const p = state.participants.find(x=>x.id===id);
+  if(!p) return;
+  const newName = await askText(`Renommer ${p.name} :`, p.name);
+  if(newName === false) return; // annulé
+  const trimmed = (newName || '').trim();
+  if(!trimmed){ showToast("⚠️ Le nom ne peut pas être vide"); return; }
+  if(state.participants.some(x=>x.id!==id && x.name.toLowerCase()===trimmed.toLowerCase())){
+    showToast("⚠️ Ce nom existe déjà");
+    return;
+  }
+  const oldName = p.name;
+  p.name = trimmed;
+  await saveData();
+  render();
+  showToast(`✅ ${oldName} renommé en ${trimmed}`);
+}
+
+// ---------- Assistant "Poisson !" (ajout de capture en 3 étapes) ----------
+let wizardStep = 0; // 0 = pêcheur, 1 = espèce, 2 = taille
+let wizardSkipParticipant = false; // true quand on entre depuis la fiche joueur (pêcheur déjà connu)
+
+function openCatchWizard(){
+  if(!isAdmin) return;
+  if(!state.participants.length){
+    showToast("⚠️ Ajoute au moins un participant via le bouton 👥 en haut à droite");
+    return;
+  }
+  wizardStep = 0;
+  wizardSkipParticipant = false;
+  selectedParticipantId = null;
+  selectedSpecies = null;
+  document.getElementById('catchWizardOverlay').classList.remove('hidden');
+  renderCatchWizard();
+}
+
+function openCatchWizardForPlayer(participantId){
+  if(!isAdmin) return;
+  document.getElementById('playerCardOverlay').classList.add('hidden');
+  selectedParticipantId = participantId;
+  selectedSpecies = null;
+  wizardStep = 1;
+  wizardSkipParticipant = true;
+  document.getElementById('catchWizardOverlay').classList.remove('hidden');
+  renderCatchWizard();
+}
+
+function closeCatchWizard(){
+  document.getElementById('catchWizardOverlay').classList.add('hidden');
+  if(wizardSkipParticipant && playerCardId){
+    document.getElementById('playerCardOverlay').classList.remove('hidden');
+    renderPlayerCard();
+  }
+  wizardSkipParticipant = false;
+}
+
+function wizardBack(){
+  if(wizardStep===1 && wizardSkipParticipant) return; // rien avant l'espèce dans ce flux
+  if(wizardStep > 0){
+    wizardStep--;
+    renderCatchWizard();
+  }
+}
+
+function wizardSelectParticipant(id){
+  selectedParticipantId = id;
+  wizardStep = 1;
+  renderCatchWizard();
+}
+
+function wizardSelectSpeciesChoice(key){
+  selectedSpecies = key;
+  wizardStep = 2;
+  renderCatchWizard();
+  setTimeout(()=>{
+    const el = document.getElementById('wizardSizeInput');
+    if(el) el.focus();
+  }, 50);
+}
+
+function renderCatchWizard(){
+  const el = document.getElementById('wizardContent');
+  if(!el) return;
+  const p = state.participants.find(x=>x.id===selectedParticipantId);
+  const s = selectedSpecies ? SPECIES[selectedSpecies] : null;
+
+  const progressParts = [];
+  if(p) progressParts.push(escapeHtml(p.name));
+  if(s) progressParts.push(s.label);
+  let html = progressParts.length ? `<div class="wizard-progress">${progressParts.join(' - ')}</div>` : '';
+
+  if(wizardStep === 0){
+    html += `<div class="wizard-title">Qui a pêché ?</div>
+      <div class="wizard-list">` +
+      state.participants.map(pp=>
+        `<div class="wizard-row" onclick="wizardSelectParticipant('${pp.id}')">${escapeHtml(pp.name)}</div>`
+      ).join('') +
+      `</div>`;
+  } else if(wizardStep === 1){
+    html += `${wizardSkipParticipant ? '' : '<button class="wizard-back" onclick="wizardBack()">← Retour</button>'}
+      <div class="wizard-title">Quel poisson ?</div>
+      <div class="speciesgrid">` +
+      SPECIES_ORDER.filter(key=>cfgFor(key).enabled).map(key=>{
+        const sp = SPECIES[key];
+        const color = SPECIES_COLORS[key];
+        return `<div class="sp-btn" style="border-left-color:${color};" onclick="wizardSelectSpeciesChoice('${key}')">
+          <span class="species-dot" style="background:${color};"></span><span class="lbl">${sp.label}</span>
+        </div>`;
+      }).join('') + `</div>`;
+  } else if(wizardStep === 2){
+    html += `<button class="wizard-back" onclick="wizardBack()">← Retour</button>
+      <div class="wizard-title">Quelle taille ?</div>
+      <input type="number" inputmode="numeric" id="wizardSizeInput" placeholder="Taille en mm" min="0" max="2000" onkeydown="if(event.key==='Enter') wizardSubmit()">
+      <button class="primary" style="margin-top:14px;" onclick="wizardSubmit()">Valider la capture</button>`;
+  }
+  el.innerHTML = html;
+}
+
+async function wizardSubmit(){
+  if(!isAdmin) return;
+  const input = document.getElementById('wizardSizeInput');
+  const size = parseInt(input.value, 10);
+  if(!size || size<=0){ showToast("⚠️ Entre une taille valide"); return; }
+  closeCatchWizard();
+  await commitCatch(selectedParticipantId, selectedSpecies, size);
+  render();
+}
+
+function showResultModal(title, message){
+  document.getElementById('resultTitle').textContent = title;
+  document.getElementById('resultMsg').textContent = message;
+  document.getElementById('resultOverlay').classList.remove('hidden');
+}
+function closeResultModal(){
+  document.getElementById('resultOverlay').classList.add('hidden');
+}
+
+const ORDINALS_FR = ["premier","deuxième","troisième","quatrième","cinquième","sixième","septième","huitième","neuvième","dixième","onzième","douzième","treizième","quatorzième","quinzième","seizième","dix-septième","dix-huitième","dix-neuvième","vingtième"];
+function ordinal(n){
+  return ORDINALS_FR[n-1] || (n + "e");
+}
+
+async function commitCatch(participantId, species, size){
+  const cfg = cfgFor(species);
+  const p = state.participants.find(x=>x.id===participantId);
+  const article = cfg.gender==='f' ? 'la' : 'le';
+  const demonstrative = cfg.gender==='f' ? 'Cette' : 'Ce';
+  if(!p){
+    showToast("⚠️ Ce pêcheur n'existe plus (supprimé entre-temps) — recommence");
+    return;
+  }
+  if(!cfg.enabled){
+    showResultModal("Espèce non autorisée", `${cfg.label} n'est plus une espèce autorisée dans ce concours.`);
+    return;
+  }
+
+  // 1) Trop petit : rejeté d'office, jamais enregistré
+  if(size < cfg.min){
+    showResultModal("Poisson trop petit !", `Non comptabilisé — taille minimale ${cfg.min}mm pour ${article} ${cfg.label.toLowerCase()}.`);
+    return;
+  }
+
+  // 2) Quota déjà complet avec des poissons plus gros : rejeté d'office, jamais enregistré
+  // Le quota (plafond) utilise toujours le réglage ACTUEL, mais on respecte la règle propre
+  // à chaque capture existante (c.ruleMin) pour juger si elle est valide, plutôt que le réglage actuel.
+  let replaces = null;
+  if(cfg.quota){
+    const currentValid = state.catches.filter(c=>{
+      if(c.participantId!==participantId || c.species!==species) return false;
+      const effMin = (c.ruleMin !== undefined) ? c.ruleMin : cfg.min;
+      return c.sizeMm >= effMin;
+    });
+    if(currentValid.length >= cfg.quota){
+      const smallest = currentValid.reduce((a,b)=> b.sizeMm < a.sizeMm ? b : a);
+      if(size <= smallest.sizeMm){
+        showResultModal("Quota déjà complet !", `${demonstrative} ${cfg.label.toLowerCase()} n'améliore pas le quota (${cfg.quota} déjà atteint avec des poissons plus gros) — non comptabilisé.`);
+        return;
+      }
+      replaces = smallest;
+    }
+  }
+
+  // Classement avant la capture
+  const before = computeResults();
+  const oldRank = before.findIndex(x=>x.id===participantId) + 1;
+  const oldTotal = (before.find(x=>x.id===participantId) || { total: 0 }).total;
+
+  // Enregistrement — on verrouille la taille minimale et le coefficient en vigueur à cet instant précis :
+  // un changement de règlement ultérieur ne modifiera jamais cette capture rétroactivement.
+  state.catches.push({ id: uid(), participantId, species, sizeMm: size, ts: Date.now(), ruleMin: cfg.min, ruleCoeff: cfg.coeff });
+  if(replaces){
+    state.catches = state.catches.filter(c=> c.id !== replaces.id);
+  }
+  await saveData();
+
+  // Classement après la capture
+  const after = computeResults();
+  const newRank = after.findIndex(x=>x.id===participantId) + 1;
+  const newTotal = after.find(x=>x.id===participantId).total;
+  const gained = newTotal - oldTotal;
+
+  let msg = `${p.name} gagne ${gained} point${gained>1?'s':''}`;
+  if(oldTotal > 0){
+    msg += ` et est maintenant à ${newTotal} point${newTotal>1?'s':''}`;
+  }
+  msg += `.`;
+  if(newRank < oldRank){
+    msg += ` Il passe ${ordinal(newRank)} !`;
+  } else {
+    msg += ` Pas de changement dans le classement.`;
+  }
+  if(replaces){
+    msg += ` Il améliore son quota ${cfg.label.toLowerCase()} !`;
+  }
+  showResultModal("Capture validée !", msg);
+}
+
+
+
+async function deleteCatch(id, evt){
+  evt.stopPropagation();
+  if(!isAdmin) return;
+  state.catches = state.catches.filter(c=>c.id!==id);
+  await saveData();
+  render();
+}
+
+async function confirmReset(){
+  if(!isAdmin) return;
+  const ok = await askConfirm("Réinitialiser tout le concours (participants + captures + règlement) ? Cette action est définitive.");
+  if(!ok) return;
+  state = { participants: [], catches: [], settings: defaultSettings() };
+  await saveData();
+  render();
+}
+
+// ---------- Init ----------
+render(); // affiche un état de chargement cohérent pendant la connexion
+initFirebase();
+</script>
+</body>
+</html>
